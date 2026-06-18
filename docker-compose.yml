@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  egm-roulette:
+    image: wildace/egm-jacksorbetter-game-service:latest
+    container_name: egm-jacksorbetter-game-service
+    networks:
+     - wildace-network
+    ports:
+      - "9080:9080"
+    restart: unless-stopped
+
+
+networks:
+  wildace-network:
+    external: true
+    name: wildace-network
