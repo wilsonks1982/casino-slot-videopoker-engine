@@ -1,0 +1,35 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'wildace-poker-engine'
+
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Spring Boot Actuator Metrics (Video Poker Service)
+  - job_name: 'videopoker-service'
+    static_configs:
+      - targets: ['localhost:8080']
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 10s
+    scrape_timeout: 5s
+
+  # Kafka Broker Metrics
+  - job_name: 'kafka'
+    static_configs:
+      - targets:
+          - 'kafka-broker-1:9092'
+          - 'kafka-broker-2:9093'
+          - 'kafka-broker-3:9094'
+    scrape_interval: 15s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+rule_files: []

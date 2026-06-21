@@ -1,15 +1,20 @@
-FROM openjdk:21-slim as build
-RUN apt-get update && \
-    apt-get install -y maven && \
-    rm -rf /var/lib/apt/lists/*
+# Spring Boot 3.5.0 Java 21 Dockerfile
+FROM maven:3.9-eclipse-temurin-21 AS build
+
 WORKDIR /home/app
+
 COPY pom.xml .
 COPY src ./src
+
 RUN mvn clean package -DskipTests
 
+# ---------------------------------------------------
+# Final Stage
+# ---------------------------------------------------
+FROM eclipse-temurin:21-jre-jammy
 
-FROM openjdk:21-slim
-VOLUME /tmp
-EXPOSE 9080
+WORKDIR /app
 COPY --from=build /home/app/target/*.jar app.jar
-ENTRYPOINT ["sh", "-c", "java -jar /app.jar"]
+
+EXPOSE 9080
+ENTRYPOINT ["java", "-jar", "app.jar"]

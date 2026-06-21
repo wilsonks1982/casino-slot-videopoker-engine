@@ -31,6 +31,34 @@ Persistent storage of game states and results
 | Build | Maven | Latest | Dependency management |
 | Monitoring | Spring Actuator | Latest | Health & metrics |
 
+
+## Non-Functional Requirements
+
+### Performance
+
+Sub-second response times for game operations
+Support for concurrent player sessions
+MongoDB indexing for query optimization
+
+### Availability
+
+Health check endpoints via Actuator
+Graceful shutdown support
+Container restart policies
+
+### Scalability
+
+Stateless API design enabling horizontal scaling
+MongoDB replica sets for data redundancy
+Load balancing ready
+
+### Maintainability
+
+Modular architecture by game variant
+Clear separation of concerns (MVC pattern)
+Comprehensive API documentation via Swagger
+
+
 ## Development Tools
 - **Build Tool:** Maven (mvnw wrapper included)
 - **Container:** Docker & Docker Compose
@@ -52,6 +80,87 @@ The service exposes RESTful endpoints for game operations:
 - `GET /api/game/{sessionId}/result` - Get game outcome
 - `GET /api/player/{playerId}/history` - Get game history
 
+
+## Data Model
+
+### Core Entities
+
+**Game Session**
+- Session ID (unique identifier)
+- Player ID
+- Game Status (in-progress, completed, pending)
+- Current Hand
+- Balance/Credits
+- Timestamp
+
+```java
+    /**
+     * Internal state for each game session.
+     * - Only the primary hand (index 0) is drawn at deal; others are empty.
+     * - All decks are shuffled and stored; only the primary deck has 47 cards after deal, others still have 52.
+     */
+    private static class GameState {
+        List<List<CardDto>> hands;      // Only primary hand populated in deal, others empty
+        List<Deque<CardDto>> decks;     // One deck per hand
+        String egmId;
+        String uid;
+        int coin;
+        int numberOfHands;
+        double wallet;
+        double oldCredit;
+        String id;
+        String gameStart;
+        double betAmount;
+        long lastAccessed = System.currentTimeMillis();
+    }
+
+    // In-memory storage for active games, keyed by sessionId
+    private final Map<String, GameState> games = new java.util.concurrent.ConcurrentHashMap<>();
+
+```
+
+**Card**
+- Suit (Hearts, Diamonds, Clubs, Spades)
+- Rank (2-10, J, Q, K, A)
+
+```java
+import io.swagger.v3.oas.annotations.media.Schema;
+
+@Schema(description = "Data Transfer Object for a playing card")
+public class CardDto {
+    private String rank;
+    private String suit;
+
+    public CardDto() {}
+    public CardDto(String rank, String suit) {
+        this.rank = rank;
+        this.suit = suit;
+    }
+    public String getRank() { return rank; }
+    public void setRank(String rank) { this.rank = rank; }
+    public String getSuit() { return suit; }
+    public void setSuit(String suit) { this.suit = suit; }
+    
+    @Override
+    public String toString() {
+    	//Take suit's first character and concatenate with rank
+		return suit.toLowerCase().charAt(0) + rank;
+	}
+}
+```
+
+**Hand**
+- Dealt Cards (5 cards)
+- Held Cards
+- Discarded Cards
+- Final Cards (after discard)
+- Hand Rank (Royal Flush, Straight Flush, Four of a Kind, etc.)
+
+**Payout**
+- Hand Type
+- Multiplier
+- Amount
+- Bet Amount
 
 ## Data Persistence
 
@@ -97,15 +206,44 @@ The service exposes RESTful endpoints for game operations:
 * Wild Card:	Card that can substitute for any other card (Deuces Wild)
 * Session:	Single game instance from start to completion
 
-## Docker Network Setup 
+## Docker Network Setup for Container Communication
 
 Manually Create Docker Network for Communication Between Containers (One-Time Setup)
 Run the following command in the terminal to create a Docker network:
 
-command - docker network create wildace-network
+command - docker network create gaming-network
 Update the configuration file to ensure the network is mentioned in each docker compose file :
 
 networks:
-  wildace-network:
+  gaming-network:
     external: true
-    name: wildace-network
+    name: gaming-network
+
+```
+# Check Docker network
+docker network ls | grep gaming-network
+
+# Create if missing
+docker network create gaming-network
+
+# Microservices
+lsof -i :9080 # Video Poker Engine
+
+# MongoDB
+lsof -i :8081 # Mongo Express
+lsof -i :27017
+
+# Redis
+lsof -i :8082 # Redis Commander
+lsof -i :6379
+
+# RabbitMQ
+lsof -i :15672 # RabbitMQ Management UI
+lsof -i :5672
+
+lsof -i :8080 # Kafaka UI
+lsof -i :9090 # Prometheus
+lsof -i :3000 # Grafana
+
+
+```

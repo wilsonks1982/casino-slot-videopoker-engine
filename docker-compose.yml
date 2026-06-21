@@ -1,17 +1,18 @@
-version: '3.8'
-
 services:
-  egm-roulette:
-    image: wildace/egm-jacksorbetter-game-service:latest
+  egm-jacksorbetter:
+    build:
+        context: .
+        dockerfile: Dockerfile
+    image: tykhegaming/egm-jacksorbetter-game-service:latest
     container_name: egm-jacksorbetter-game-service
     networks:
-     - wildace-network
+     - gaming-network
     ports:
       - "9080:9080"
     restart: unless-stopped
 
 
 networks:
-  wildace-network:
+  gaming-network:
     external: true
-    name: wildace-network
+    name: gaming-network
